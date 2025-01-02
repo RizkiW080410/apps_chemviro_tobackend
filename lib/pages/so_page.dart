@@ -1,46 +1,119 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../services/api_service.dart';
 import '../routes/route.dart';
 
-class SalesOrderPage extends StatelessWidget {
+class SalesOrderPage extends StatefulWidget {
   const SalesOrderPage({super.key});
+
+  @override
+  State<SalesOrderPage> createState() => _SalesOrderPageState();
+}
+
+class _SalesOrderPageState extends State<SalesOrderPage> {
+  final ApiService _apiService = Get.find<ApiService>();
+  List<Map<String, dynamic>> salesOrders = [];
+  bool isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    fetchSalesOrders();
+  }
+
+  Future<void> fetchSalesOrders() async {
+    try {
+      final response = await _apiService.fetchOrdersByStatus('Sales Order');
+      setState(() {
+        salesOrders = response
+            .where((order) => order['status'] == 'Sales Order')
+            .toList();
+        isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+      });
+      Get.snackbar(
+        'Error',
+        e.toString(),
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+    }
+  }
+
+  double calculateTotalAmount(
+      List<Map<String, dynamic>> products, double? discountPercent) {
+    double total = 0;
+
+    // Kalkulasi total harga produk
+    for (var product in products) {
+      total += product['price'] ?? 0.0;
+    }
+
+    // Terapkan diskon jika ada
+    if (discountPercent != null && discountPercent > 0) {
+      total -= (total * discountPercent / 100);
+    }
+
+    // Tambahkan pajak 11%
+    total += (total * 11 / 100);
+
+    return total;
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         leading: IconButton(
-          icon: Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () {
             Get.toNamed(Routes.profile);
           },
         ),
-        title: Text('Sales Order', style: TextStyle(color: Colors.green)),
+        title: const Text('Sales Order', style: TextStyle(color: Colors.green)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
         actions: [
           CircleAvatar(
             backgroundColor: Colors.grey.shade300,
-            child: Icon(Icons.person, color: Colors.white),
+            child: const Icon(Icons.person, color: Colors.white),
           ),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
         ],
       ),
-      body: ListView(
-        padding: EdgeInsets.all(16.0),
-        children: [
-          SizedBox(height: 16),
-          _buildOrderCard(
-            icon: Icons.air,
-            title: "Analisa Lingkungan",
-            orderNumber: "SO-000002",
-            client: "PT. Ada AQUA",
-            product: "Udara Ambient 24 Jam",
-            totalAmount: "Rp. 104.062,00",
-          ),
-        ],
-      ),
+      body: isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : salesOrders.isEmpty
+              ? const Center(child: Text('No Sales Orders Available'))
+              : ListView.builder(
+                  padding: const EdgeInsets.all(16.0),
+                  itemCount: salesOrders.length,
+                  itemBuilder: (context, index) {
+                    final order = salesOrders[index];
+                    final products =
+                        List<Map<String, dynamic>>.from(order['products']);
+                    final totalAmount = calculateTotalAmount(
+                      products,
+                      order['discount']?['percent']?.toDouble(),
+                    );
+
+                    return _buildOrderCard(
+                      icon: Icons.air,
+                      title: order['status'],
+                      orderNumber: order['order_number'],
+                      client: order['client']['name'] ?? 'Unknown Client',
+                      product: products.isNotEmpty
+                          ? products.map((p) => p['category']).join(', ')
+                          : 'No Products',
+                      totalAmount: 'Rp. ${totalAmount.toStringAsFixed(2)}',
+                    );
+                  },
+                ),
     );
   }
 
@@ -53,7 +126,8 @@ class SalesOrderPage extends StatelessWidget {
     required String totalAmount,
   }) {
     return Container(
-      padding: EdgeInsets.all(16.0),
+      padding: const EdgeInsets.all(16.0),
+      margin: const EdgeInsets.only(bottom: 16.0),
       decoration: BoxDecoration(
         color: Colors.green.shade50,
         borderRadius: BorderRadius.circular(8.0),
@@ -62,25 +136,25 @@ class SalesOrderPage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Icon(icon, size: 32, color: Colors.green),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   title,
-                  style: TextStyle(
+                  style: const TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
                     color: Colors.black87,
                   ),
                 ),
-                SizedBox(height: 8),
+                const SizedBox(height: 8),
                 Text("Order Number: $orderNumber"),
                 Text("Client: $client"),
                 Text("Product: $product"),
                 Text("Total Amount: $totalAmount"),
-                SizedBox(height: 16),
+                const SizedBox(height: 16),
                 ElevatedButton(
                   onPressed: () {
                     // Handle Sales Order button
@@ -91,13 +165,13 @@ class SalesOrderPage extends StatelessWidget {
                       borderRadius: BorderRadius.circular(20),
                     ),
                   ),
-                  child: Text('Sales Order'),
+                  child: const Text('Sales Order'),
                 ),
               ],
             ),
           ),
           IconButton(
-            icon: Icon(Icons.arrow_forward, color: Colors.black54),
+            icon: const Icon(Icons.arrow_forward, color: Colors.black54),
             onPressed: () {
               Get.toNamed(Routes.detailSalesOrder);
             },

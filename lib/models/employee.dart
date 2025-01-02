@@ -40,7 +40,8 @@ class Employee {
               .length ??
           0,
       coCount:
-          orders?.where((order) => order['status'] == 'Cancelled').length ?? 0,
+          orders?.where((order) => order['status'] == 'Cancel Order').length ??
+              0,
       clientCount: (json['client'] as List<dynamic>?)?.length ?? 0,
     );
   }

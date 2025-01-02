@@ -80,10 +80,18 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final jsonResponse = json.decode(response.body);
-      final data = jsonResponse['data']['data']; // Ambil dari data['data']
+      print(jsonResponse); // Debugging: Periksa struktur data API di konsol
+      final data =
+          jsonResponse['data']['data']; // Sesuaikan dengan struktur data Anda
       if (data is List) {
         return List<Map<String, dynamic>>.from(data.map((client) {
-          return {'id': client['id'], 'name': client['name']};
+          return {
+            'id': client['id'],
+            'name': client['name'],
+            'email': client['email'], // Pastikan key sesuai dengan API
+            'address': client['address'],
+            'phone': client['phone'],
+          };
         }));
       } else {
         throw Exception("Invalid format for clients data.");
@@ -200,6 +208,18 @@ class ApiService {
       return json.decode(response.body);
     } else {
       throw Exception("Failed to create order: ${response.body}");
+    }
+  }
+
+  Future<List<Map<String, dynamic>>> fetchOrdersByStatus(String status) async {
+    final url = Uri.parse("$baseUrl/orders?status=$status");
+    final response = await http.get(url, headers: _getHeaders());
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      return List<Map<String, dynamic>>.from(jsonResponse['data']['data']);
+    } else {
+      throw Exception("Failed to load orders: ${response.body}");
     }
   }
 }
