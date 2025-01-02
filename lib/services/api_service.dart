@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:apps_chemviro/models/product.dart';
+import 'package:apps_chemviro/models/employee.dart';
 
 class ApiService {
   static const String baseUrl = "http://localhost/api";
@@ -79,22 +80,13 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final jsonResponse = json.decode(response.body);
-
-      if (jsonResponse['data'] != null &&
-          jsonResponse['data']['data'] != null) {
-        return List<Map<String, dynamic>>.from(
-            jsonResponse['data']['data'].map((client) {
-          if (client.containsKey('id') && client.containsKey('name')) {
-            return {
-              'id': client['id'],
-              'name': client['name'],
-            };
-          } else {
-            throw Exception("Invalid client data format.");
-          }
+      final data = jsonResponse['data']['data']; // Ambil dari data['data']
+      if (data is List) {
+        return List<Map<String, dynamic>>.from(data.map((client) {
+          return {'id': client['id'], 'name': client['name']};
         }));
       } else {
-        throw Exception("Invalid format for clients response.");
+        throw Exception("Invalid format for clients data.");
       }
     } else {
       throw Exception("Failed to load clients: ${response.body}");
@@ -108,15 +100,76 @@ class ApiService {
 
     if (response.statusCode == 200) {
       final jsonResponse = json.decode(response.body);
-      final data =
-          jsonResponse['data']['data']; // Ambil data dari `data['data']`
+      final data = jsonResponse['data']['data']; // Ambil dari data['data']
       if (data is List) {
-        return List<Map<String, dynamic>>.from(data);
+        return List<Map<String, dynamic>>.from(data.map((branch) {
+          return {'id': branch['id'], 'name': branch['name']};
+        }));
       } else {
         throw Exception("Invalid format for branch companies data.");
       }
     } else {
       throw Exception("Failed to load branch companies: ${response.body}");
+    }
+  }
+
+  // Tambahkan di dalam ApiService
+  Future<List<Map<String, dynamic>>> fetchDiscounts() async {
+    final url = Uri.parse(
+        "$baseUrl/discounts"); // Ganti "discounts" dengan endpoint API Anda
+    final response = await http.get(url, headers: _getHeaders());
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+
+      if (jsonResponse['data'] != null &&
+          jsonResponse['data']['data'] != null) {
+        return List<Map<String, dynamic>>.from(
+          jsonResponse['data']['data'].map((discount) {
+            if (discount.containsKey('id') && discount.containsKey('name')) {
+              return {
+                'id': discount['id'],
+                'name':
+                    discount['name'], // Pastikan field ini sesuai dengan API
+              };
+            } else {
+              throw Exception("Invalid discount data format.");
+            }
+          }),
+        );
+      } else {
+        throw Exception("Invalid format for discounts response.");
+      }
+    } else {
+      throw Exception("Failed to load discounts: ${response.body}");
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchCurrentUser() async {
+    final url = Uri.parse("$baseUrl/user");
+    final response = await http.get(url, headers: _getHeaders());
+    if (response.statusCode == 200) {
+      return json.decode(response.body);
+    } else {
+      throw Exception("Failed to fetch user data: ${response.body}");
+    }
+  }
+
+  Future<Employee> fetchEmployeeData() async {
+    // Endpoint untuk mendapatkan data karyawan
+    final url = Uri.parse('$baseUrl/employees/details');
+    final response = await http.get(url, headers: _getHeaders());
+
+    if (response.statusCode == 200) {
+      final jsonResponse = json.decode(response.body);
+      if (jsonResponse['data'] != null) {
+        return Employee.fromJson(jsonResponse['data']);
+      } else {
+        throw Exception("Employee data not found.");
+      }
+    } else {
+      throw Exception(
+          "Failed to fetch employee data: ${response.body}"); // Debugging error jika API gagal
     }
   }
 

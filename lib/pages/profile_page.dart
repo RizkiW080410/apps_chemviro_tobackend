@@ -1,95 +1,139 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:apps_chemviro/models/employee.dart';
+import 'package:apps_chemviro/services/api_service.dart';
 import '../routes/route.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return Profile();
-  }
+  State<ProfilePage> createState() => _ProfilePageState();
 }
 
-class Profile extends StatelessWidget {
-  const Profile({super.key});
+class _ProfilePageState extends State<ProfilePage> {
+  final ApiService _apiService = Get.find<ApiService>();
+  Employee? _employeeData;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchEmployeeData();
+  }
+
+  Future<void> _fetchEmployeeData() async {
+    try {
+      // Ambil data karyawan berdasarkan token
+      final employee = await _apiService.fetchEmployeeData();
+      setState(() {
+        _employeeData = employee;
+        _isLoading = false;
+      });
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load profile data: $e")),
+      );
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text('Profile'),
+        title: const Text('Profile'),
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Colors.blueGrey),
+          icon: const Icon(Icons.arrow_back, color: Colors.blueGrey),
           onPressed: () {
-            Get.offNamed(Routes.home); // Mengarahkan langsung ke halaman Home
+            Get.offNamed(Routes.home);
           },
         ),
       ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(16.0),
-        child: Column(
-          children: [
-            // Profile Image and Name
-            Center(
-              child: Column(
-                children: [
-                  CircleAvatar(
-                    radius: 50,
-                    backgroundImage: AssetImage('assets/avatar.png'),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _employeeData == null
+              ? const Center(child: Text("Data not available"))
+              : SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    children: [
+                      Center(
+                        child: Column(
+                          children: [
+                            CircleAvatar(
+                              radius: 50,
+                              backgroundImage:
+                                  const AssetImage('assets/avatar.png'),
+                            ),
+                            const SizedBox(height: 10),
+                            Text(
+                              _employeeData?.userName ?? 'Unknown Name',
+                              style: const TextStyle(
+                                fontSize: 20,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              _employeeData?.department ?? 'Unknown Department',
+                              style: const TextStyle(
+                                fontSize: 16,
+                                color: Colors.grey,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 20),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                        children: [
+                          _buildStatCard(
+                              'SO',
+                              _employeeData?.soCount.toString() ?? '0',
+                              Routes.salesOrder),
+                          _buildStatCard(
+                              'PO',
+                              _employeeData?.poCount.toString() ?? '0',
+                              Routes.purchaseOrder),
+                          _buildStatCard(
+                              'CO',
+                              _employeeData?.coCount.toString() ?? '0',
+                              Routes.cancelOrder),
+                          _buildStatCard(
+                              'Client',
+                              _employeeData?.clientCount.toString() ?? '0',
+                              Routes.client),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                      _buildDetailItem(Icons.phone, 'Nomor Telepon',
+                          _employeeData?.phone ?? 'Unknown Phone'),
+                      _buildDetailItem(Icons.email, 'Email',
+                          _employeeData?.userEmail ?? 'Unknown Email'),
+                      _buildDetailItem(Icons.business, 'Company',
+                          _employeeData?.branchCompany ?? 'Unknown Company'),
+                      _buildDetailItem(
+                          Icons.location_city,
+                          'Branch Company',
+                          _employeeData?.branchCompanyAddress ??
+                              'Unknown Address'),
+                      _buildDetailItem(Icons.apartment, 'Department',
+                          _employeeData?.department ?? 'Unknown Department'),
+                    ],
                   ),
-                  SizedBox(height: 10),
-                  Text(
-                    'Rizky Wahyu',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  Text(
-                    'Sales',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            SizedBox(height: 20),
-
-            // Statistics Row
-            // Row(
-            //   mainAxisAlignment: MainAxisAlignment.spaceAround,
-            //   children: [
-            //     _buildStatCard('SO', '2', Routes.salesOrder),
-            //     _buildStatCard('PO', '2', Routes.purchaseOrder),
-            //     _buildStatCard('CO', '2', Routes.cancelOrder),
-            //     _buildStatCard('Client', '2', Routes.client),
-            //   ],
-            // ),
-            SizedBox(height: 20),
-
-            // Details Section
-            _buildDetailItem(Icons.phone, 'Nomor Telepon', '0812 2 3456 7890'),
-            _buildDetailItem(Icons.email, 'Email', 'athar12@gmail.com'),
-            _buildDetailItem(Icons.business, 'Company', 'PT. CBT'),
-            _buildDetailItem(
-                Icons.location_city, 'Branch Company', 'PT. CBT Panongan'),
-            _buildDetailItem(Icons.apartment, 'Department', 'Sales'),
-          ],
-        ),
-      ),
+                ),
     );
   }
 
-  // Method to build statistic cards
   Widget _buildStatCard(String label, String value, String route) {
     return GestureDetector(
       onTap: () {
-        Get.offNamed(route); // Menghapus halaman profil dari tumpukan navigasi
+        Get.offNamed(route);
       },
       child: Column(
         children: [
@@ -103,14 +147,14 @@ class Profile extends StatelessWidget {
             child: Center(
               child: Text(
                 value,
-                style: TextStyle(
+                style: const TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
                 ),
               ),
             ),
           ),
-          SizedBox(height: 5),
+          const SizedBox(height: 5),
           Text(
             label,
             style: TextStyle(fontSize: 16, color: Colors.grey[700]),
@@ -120,14 +164,13 @@ class Profile extends StatelessWidget {
     );
   }
 
-  // Method to build detail items
   Widget _buildDetailItem(IconData icon, String label, String value) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
       child: Row(
         children: [
           Icon(icon, size: 24, color: Colors.blueGrey),
-          SizedBox(width: 16),
+          const SizedBox(width: 16),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,10 +183,10 @@ class Profile extends StatelessWidget {
                     color: Colors.grey[600],
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
                   value,
-                  style: TextStyle(fontSize: 16),
+                  style: const TextStyle(fontSize: 16),
                 ),
               ],
             ),

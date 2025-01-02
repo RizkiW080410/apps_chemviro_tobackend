@@ -17,12 +17,15 @@ class _HomePageState extends State<HomePage> {
   final ApiService _apiService = Get.find<ApiService>();
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   List<Map<String, dynamic>> _categories = [];
+  String _userName = "Loading...";
+  String _userEmail = "Loading...";
   bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _fetchData();
+    _fetchUserData();
   }
 
   Future<void> _fetchData() async {
@@ -39,6 +42,24 @@ class _HomePageState extends State<HomePage> {
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text("Failed to load products: $e")),
+      );
+    }
+  }
+
+  Future<void> _fetchUserData() async {
+    try {
+      final userData = await _apiService.fetchCurrentUser();
+      setState(() {
+        _userName = userData['name'];
+        _userEmail = userData['email'];
+      });
+    } catch (e) {
+      setState(() {
+        _userName = "Error loading name";
+        _userEmail = "Error loading email";
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to load user data: $e")),
       );
     }
   }
@@ -93,7 +114,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          "Cuita Tri Arsheila",
+                          _userName,
                           style: GoogleFonts.poppins(
                             fontWeight: FontWeight.bold,
                             fontSize: 16,
@@ -101,7 +122,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                         ),
                         Text(
-                          "Cuitatriashh@gmail.com",
+                          _userEmail,
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             color: Colors.grey,
@@ -252,7 +273,7 @@ class _HomePageState extends State<HomePage> {
                   ),
                   const SizedBox(width: 8),
                   const Icon(
-                    Icons.add, // Ikon tambahan
+                    Icons.add,
                     color: Colors.white,
                   ),
                 ],

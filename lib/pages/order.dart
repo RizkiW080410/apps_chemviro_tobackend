@@ -16,12 +16,14 @@ class _OrderPageState extends State<OrderPage> {
   final ApiService _apiService = Get.find<ApiService>();
   bool _isLoading = false;
 
-  List<Product> _products = []; // Gunakan List<Product>
+  List<Product> _products = [];
   List<Map<String, dynamic>> _clients = [];
   List<Map<String, dynamic>> _branchCompanies = [];
+  List<Map<String, dynamic>> _discounts = [];
   String? _selectedStatus;
   int? _selectedClientId;
   int? _selectedBranchCompanyId;
+  int? _selectedDiscountId;
   List<int> _selectedProducts = [];
 
   @override
@@ -35,20 +37,18 @@ class _OrderPageState extends State<OrderPage> {
       final products = await _apiService.fetchProducts();
       final clients = await _apiService.fetchClients();
       final branchCompanies = await _apiService.fetchBranchCompanies();
+      final discounts = await _apiService.fetchDiscounts();
 
       setState(() {
         _products = products;
         _clients = clients
-            .map((client) => {
-                  'id': client['id'],
-                  'name': client['name'],
-                })
+            .map((client) => {'id': client['id'], 'name': client['name']})
             .toList();
         _branchCompanies = branchCompanies
-            .map((branch) => {
-                  'id': branch['id'],
-                  'name': branch['name'],
-                })
+            .map((branch) => {'id': branch['id'], 'name': branch['name']})
+            .toList();
+        _discounts = discounts
+            .map((discount) => {'id': discount['id'], 'name': discount['name']})
             .toList();
       });
     } catch (e) {
@@ -62,6 +62,7 @@ class _OrderPageState extends State<OrderPage> {
     if (_selectedStatus == null ||
         _selectedClientId == null ||
         _selectedBranchCompanyId == null ||
+        _selectedDiscountId == null ||
         _selectedProducts.isEmpty) {
       _showSnackbar(
         title: "Error",
@@ -79,7 +80,7 @@ class _OrderPageState extends State<OrderPage> {
       final response = await _apiService.createOrder(
         status: _selectedStatus!,
         employeeId: null,
-        discountId: null,
+        discountId: _selectedDiscountId!,
         clientId: _selectedClientId!,
         branchCompanyId: _selectedBranchCompanyId!,
         products: _selectedProducts,
@@ -204,6 +205,14 @@ class _OrderPageState extends State<OrderPage> {
                 value: _selectedBranchCompanyId,
                 onChanged: (value) =>
                     setState(() => _selectedBranchCompanyId = value),
+              ),
+              const SizedBox(height: 20),
+              buildDropdown<int>(
+                label: "Select Discount",
+                items: _discounts,
+                value: _selectedDiscountId,
+                onChanged: (value) =>
+                    setState(() => _selectedDiscountId = value),
               ),
               const SizedBox(height: 20),
               DropdownButtonFormField<int>(
