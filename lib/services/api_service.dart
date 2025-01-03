@@ -101,6 +101,32 @@ class ApiService {
     }
   }
 
+  // create client
+  Future<void> createClient({
+    required String name,
+    required String email,
+    required String address,
+    required String phone,
+    required int? branchCompanyId,
+  }) async {
+    final url = Uri.parse("$baseUrl/clients");
+    final headers = _getHeaders();
+
+    final body = json.encode({
+      'name': name,
+      'email': email,
+      'address': address,
+      'phone': phone,
+      'branch_company_id': branchCompanyId,
+    });
+
+    final response = await http.post(url, headers: headers, body: body);
+
+    if (response.statusCode != 201 && response.statusCode != 200) {
+      throw Exception("Failed to create client: ${response.body}");
+    }
+  }
+
   // Fetch list of branch companies
   Future<List<Map<String, dynamic>>> fetchBranchCompanies() async {
     final url = Uri.parse("$baseUrl/branch_companys");
@@ -220,6 +246,46 @@ class ApiService {
       return List<Map<String, dynamic>>.from(jsonResponse['data']['data']);
     } else {
       throw Exception("Failed to load orders: ${response.body}");
+    }
+  }
+
+  Future<Map<String, dynamic>> fetchOrderDetails(int orderId) async {
+    final url = Uri.parse("$baseUrl/orders/$orderId");
+    final response = await http.get(url, headers: _getHeaders());
+
+    if (response.statusCode == 200) {
+      return json.decode(response.body)['data'];
+    } else {
+      throw Exception("Failed to fetch order details: ${response.body}");
+    }
+  }
+
+  // Update order
+  Future<void> updateOrder({
+    required int orderId,
+    required String status,
+    int? employeeId,
+    int? discountId,
+    int? clientId,
+    int? branchCompanyId,
+    List<int>? products,
+  }) async {
+    final url = Uri.parse("$baseUrl/orders/$orderId");
+    final headers = _getHeaders();
+
+    final body = json.encode({
+      'status': status,
+      if (employeeId != null) 'employee_id': employeeId,
+      if (discountId != null) 'discount_id': discountId,
+      if (clientId != null) 'client_id': clientId,
+      if (branchCompanyId != null) 'branch_company_id': branchCompanyId,
+      if (products != null) 'products': products,
+    });
+
+    final response = await http.put(url, headers: headers, body: body);
+
+    if (response.statusCode != 200) {
+      throw Exception("Failed to update order: ${response.body}");
     }
   }
 }

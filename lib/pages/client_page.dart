@@ -45,7 +45,7 @@ class _ClientPageState extends State<ClientPage> {
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
-            Get.toNamed(Routes.profile);
+            Get.toNamed(Routes.profile); // Navigasi ke halaman Profile
           },
         ),
         title: const Text('Client', style: TextStyle(color: Colors.green)),
@@ -91,7 +91,7 @@ class _ClientPageState extends State<ClientPage> {
                     ),
       floatingActionButton: FloatingActionButton(
         onPressed: () {
-          // Handle create client action
+          Get.toNamed(Routes.createClient); // Navigasi ke halaman Create Client
         },
         backgroundColor: Colors.green,
         child: const Icon(Icons.add),

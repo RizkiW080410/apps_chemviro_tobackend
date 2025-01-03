@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../routes/route.dart';
+import '../pages/detail_co_pages.dart';
 
 class CancelOrderPage extends StatefulWidget {
   const CancelOrderPage({super.key});
@@ -45,18 +46,16 @@ class _CancelOrderPageState extends State<CancelOrderPage> {
     }
   }
 
-  double calculateTotalAmount(
-      List<Map<String, dynamic>> products, double? discountPercent) {
+  double calculateTotalAmount(List<dynamic> products) {
     double total = 0;
 
     // Kalkulasi total harga produk
     for (var product in products) {
-      total += product['price'] ?? 0.0;
-    }
-
-    // Terapkan diskon jika ada
-    if (discountPercent != null && discountPercent > 0) {
-      total -= (total * discountPercent / 100);
+      final priceProduct = product['price_product'];
+      final price = priceProduct != null
+          ? double.tryParse(priceProduct['price'].toString()) ?? 0.0
+          : 0.0;
+      total += price;
     }
 
     // Tambahkan pajak 11%
@@ -97,22 +96,22 @@ class _CancelOrderPageState extends State<CancelOrderPage> {
                   itemCount: cancelOrders.length,
                   itemBuilder: (context, index) {
                     final order = cancelOrders[index];
-                    final products =
-                        List<Map<String, dynamic>>.from(order['products']);
-                    final totalAmount = calculateTotalAmount(
-                      products,
-                      order['discount']?['percent']?.toDouble(),
-                    );
+                    final products = List<dynamic>.from(order['products']);
+                    final totalAmount = calculateTotalAmount(products);
 
                     return _buildOrderCard(
                       icon: Icons.cancel,
                       title: order['status'],
                       orderNumber: order['order_number'],
-                      client: order['client']['name'] ?? 'Unknown Client',
+                      client: order['client']?['name'] ?? 'Unknown Client',
                       product: products.isNotEmpty
-                          ? products.map((p) => p['category']).join(', ')
+                          ? products.map((p) => p['name']).join(', ')
                           : 'No Products',
                       totalAmount: 'Rp. ${totalAmount.toStringAsFixed(2)}',
+                      onPressed: () {
+                        // Navigasi ke halaman detail dengan data order
+                        Get.to(() => CancelOrderDetailPage(order: order));
+                      },
                     );
                   },
                 ),
@@ -126,6 +125,7 @@ class _CancelOrderPageState extends State<CancelOrderPage> {
     required String client,
     required String product,
     required String totalAmount,
+    required VoidCallback onPressed,
   }) {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -158,9 +158,7 @@ class _CancelOrderPageState extends State<CancelOrderPage> {
                 Text("Total Amount: $totalAmount"),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    // Handle Cancel Order button
-                  },
+                  onPressed: onPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     shape: RoundedRectangleBorder(
@@ -174,9 +172,7 @@ class _CancelOrderPageState extends State<CancelOrderPage> {
           ),
           IconButton(
             icon: const Icon(Icons.arrow_forward, color: Colors.black54),
-            onPressed: () {
-              Get.toNamed(Routes.detailCancelOrder);
-            },
+            onPressed: onPressed,
           ),
         ],
       ),

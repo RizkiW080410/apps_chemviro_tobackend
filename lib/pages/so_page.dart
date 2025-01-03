@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../services/api_service.dart';
 import '../routes/route.dart';
+import '../pages/detail_so_page.dart';
+import '../pages/edit_order_page.dart'; // Tambahkan import ini
 
 class SalesOrderPage extends StatefulWidget {
   const SalesOrderPage({super.key});
@@ -44,18 +46,15 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
     }
   }
 
-  double calculateTotalAmount(
-      List<Map<String, dynamic>> products, double? discountPercent) {
+  double calculateTotalAmount(List<dynamic> products) {
     double total = 0;
 
-    // Kalkulasi total harga produk
     for (var product in products) {
-      total += product['price'] ?? 0.0;
-    }
-
-    // Terapkan diskon jika ada
-    if (discountPercent != null && discountPercent > 0) {
-      total -= (total * discountPercent / 100);
+      final priceProduct = product['price_product'];
+      final price = priceProduct != null
+          ? double.tryParse(priceProduct['price'].toString()) ?? 0.0
+          : 0.0;
+      total += price;
     }
 
     // Tambahkan pajak 11%
@@ -95,22 +94,24 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
                   itemCount: salesOrders.length,
                   itemBuilder: (context, index) {
                     final order = salesOrders[index];
-                    final products =
-                        List<Map<String, dynamic>>.from(order['products']);
-                    final totalAmount = calculateTotalAmount(
-                      products,
-                      order['discount']?['percent']?.toDouble(),
-                    );
+                    final products = List<dynamic>.from(order['products']);
+                    final totalAmount = calculateTotalAmount(products);
 
                     return _buildOrderCard(
                       icon: Icons.air,
                       title: order['status'],
                       orderNumber: order['order_number'],
-                      client: order['client']['name'] ?? 'Unknown Client',
+                      client: order['client']?['name'] ?? 'Unknown Client',
                       product: products.isNotEmpty
-                          ? products.map((p) => p['category']).join(', ')
+                          ? products.map((p) => p['name']).join(', ')
                           : 'No Products',
                       totalAmount: 'Rp. ${totalAmount.toStringAsFixed(2)}',
+                      onPressed: () {
+                        Get.to(() => SalesOrderDetailPage(order: order));
+                      },
+                      onEditPressed: () {
+                        Get.toNamed(Routes.editOrder, arguments: order);
+                      },
                     );
                   },
                 ),
@@ -124,6 +125,8 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
     required String client,
     required String product,
     required String totalAmount,
+    required VoidCallback onPressed,
+    required VoidCallback onEditPressed, // Tambahkan callback untuk edit
   }) {
     return Container(
       padding: const EdgeInsets.all(16.0),
@@ -156,9 +159,7 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
                 Text("Total Amount: $totalAmount"),
                 const SizedBox(height: 16),
                 ElevatedButton(
-                  onPressed: () {
-                    // Handle Sales Order button
-                  },
+                  onPressed: onPressed,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.green,
                     shape: RoundedRectangleBorder(
@@ -170,11 +171,17 @@ class _SalesOrderPageState extends State<SalesOrderPage> {
               ],
             ),
           ),
-          IconButton(
-            icon: const Icon(Icons.arrow_forward, color: Colors.black54),
-            onPressed: () {
-              Get.toNamed(Routes.detailSalesOrder);
-            },
+          Column(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.edit, color: Colors.blue),
+                onPressed: onEditPressed, // Navigasi ke halaman edit
+              ),
+              IconButton(
+                icon: const Icon(Icons.arrow_forward, color: Colors.black54),
+                onPressed: onPressed,
+              ),
+            ],
           ),
         ],
       ),

@@ -1,19 +1,21 @@
 import 'package:get/get.dart';
 import '../pages/login.dart';
 import '../pages/home.dart';
-import '../pages/welcome.dart'; // Import WelcomePage
+import '../pages/welcome.dart';
 import '../pages/order.dart';
 import '../pages/profile_page.dart';
 import '../pages/so_page.dart';
 import '../pages/po_page.dart';
 import '../pages/co_page.dart';
 import '../pages/client_page.dart';
+import '../pages/create_client_page.dart';
 import '../pages/detail_co_pages.dart';
 import '../pages/detail_po_page.dart';
 import '../pages/detail_so_page.dart';
+import '../pages/edit_order_page.dart';
 
 class Routes {
-  static const welcome = '/welcome'; // Rute untuk WelcomePage
+  static const welcome = '/welcome';
   static const login = '/login';
   static const home = '/home';
   static const profile = '/profile';
@@ -22,9 +24,11 @@ class Routes {
   static const purchaseOrder = '/purchase-order';
   static const cancelOrder = '/cancel-order';
   static const client = '/client';
+  static const createClient = '/client/create';
   static const detailCancelOrder = '/detail-cancel-order';
   static const detailSalesOrder = '/detail-sales-order';
   static const detailPurchaseOrder = '/detail-purchase-order';
+  static const editOrder = '/edit-order';
 }
 
 class AppPages {
@@ -54,6 +58,10 @@ class AppPages {
       page: () => const ClientPage(),
     ),
     GetPage(
+      name: Routes.createClient,
+      page: () => const CreateClientPage(),
+    ),
+    GetPage(
       name: Routes.salesOrder,
       page: () => const SalesOrderPage(),
     ),
@@ -67,15 +75,19 @@ class AppPages {
     ),
     GetPage(
       name: Routes.detailCancelOrder,
-      page: () => const CancelOrderDetailPage(),
+      page: () => CancelOrderDetailPage(order: Get.arguments),
     ),
     GetPage(
       name: Routes.detailSalesOrder,
-      page: () => const SalesOrderDetailPage(),
+      page: () => SalesOrderDetailPage(order: Get.arguments),
     ),
     GetPage(
       name: Routes.detailPurchaseOrder,
-      page: () => const PurchaseOrderDetailPage(),
+      page: () => PurchaseOrderDetailPage(order: Get.arguments),
+    ),
+    GetPage(
+      name: Routes.editOrder,
+      page: () => EditOrderPage(order: Get.arguments),
     ),
   ];
 }
