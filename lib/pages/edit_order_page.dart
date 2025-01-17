@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:get/get.dart';
-import '../services/api_service.dart';
 import '../models/product.dart';
+import '../services/api_service.dart';
 import '../routes/route.dart';
 
 class EditOrderPage extends StatefulWidget {
@@ -250,7 +250,7 @@ class _EditOrderPageState extends State<EditOrderPage> {
                       name: 'Unknown',
                       categoryProduct: '',
                       category: '',
-                      price: null,
+                      price: '', // Berikan default kosong untuk String nullable
                       priceId: productId,
                     ),
                   );

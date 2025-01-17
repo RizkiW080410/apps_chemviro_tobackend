@@ -10,339 +10,277 @@ class SalesOrderDetailPage extends StatelessWidget {
 
   const SalesOrderDetailPage({Key? key, required this.order}) : super(key: key);
 
-  double calculateTotalAmount(List<dynamic> products) {
-    double total = 0;
-
+  double calculateSubtotal(List<dynamic> products) {
+    double subtotal = 0.0;
     for (var product in products) {
       final priceProduct = product['price_product'];
       final price = priceProduct != null
           ? double.tryParse(priceProduct['price'].toString()) ?? 0.0
           : 0.0;
-      total += price;
+      subtotal += price;
     }
+    return subtotal;
+  }
 
-    // Tambahkan pajak 11%
-    total += (total * 11 / 100);
+  double calculateTax(double subtotal) {
+    return subtotal * 0.11; // 11% tax rate
+  }
 
-    return total;
+  double calculateTotalAmount(double subtotal, double tax) {
+    return subtotal + tax;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final branchCompany = order['branch_company']; // Ambil data branch_company
+    final products = List<dynamic>.from(order['products'] ?? []);
+    final subtotal = calculateSubtotal(products);
+    final tax = calculateTax(subtotal);
+    final totalAmount = calculateTotalAmount(subtotal, tax);
+
+    return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        title: Text(
+          'Sales Order',
+          style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Colors.green),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // Header with branch company data
+            Container(
+              padding: const EdgeInsets.all(16.0),
+              decoration: BoxDecoration(
+                color: Colors.green.shade50,
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                children: [
+                  // Logo
+                  Image.asset(
+                    'assets/images/logo_login.png', // Path ke logo
+                    height: 50,
+                  ),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'PT. Chemviro Buana Indonesia',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.green,
+                        ),
+                      ),
+                      Text(
+                        branchCompany?['name'] ?? 'Unknown Branch',
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildDetailRow('Order Number', order['order_number']),
+            _buildDetailRow('Client', order['client']?['name']),
+            _buildDetailRow('Address', order['client']?['address']),
+            _buildDetailRow('Email', order['client']?['email']),
+            _buildDetailRow('Phone', order['client']?['phone']),
+            _buildDetailRow('Status', order['status']),
+            const SizedBox(height: 16),
+            Text(
+              'Items:',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            const SizedBox(height: 8),
+            ...products.map((product) => _buildProductRow(
+                  product['name'] ?? 'Unknown',
+                  'Rp. ${double.tryParse(product['price_product']?['price']?.toString() ?? '0')?.toStringAsFixed(2)}',
+                  product['category'] ?? 'Unknown Category',
+                )),
+            const Divider(),
+            _buildDetailRow('Subtotal', 'Rp. ${subtotal.toStringAsFixed(2)}'),
+            _buildDetailRow('Tax Rate', '11%'),
+            _buildDetailRow('Total Tax', 'Rp. ${tax.toStringAsFixed(2)}'),
+            _buildDetailRow(
+                'Total Amount', 'Rp. ${totalAmount.toStringAsFixed(2)}'),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () => generatePdf(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.green,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: Text('Download PDF',
+                        style: TextStyle(color: Colors.white)),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String? value) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(
+              '$label:',
+              style: TextStyle(
+                  fontWeight: FontWeight.bold, color: Colors.grey[700]),
+            ),
+          ),
+          Text(value ?? '-', style: TextStyle(color: Colors.black)),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProductRow(String name, String amount, String category) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(name, style: TextStyle(fontSize: 14)),
+              Text(amount, style: TextStyle(fontWeight: FontWeight.bold)),
+            ],
+          ),
+          SizedBox(height: 4),
+          Text(
+            'Category: $category',
+            style: TextStyle(fontSize: 12, color: Colors.grey),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> generatePdf(BuildContext context) async {
     final pdf = pw.Document();
     final products = List<dynamic>.from(order['products'] ?? []);
-    final totalAmount = calculateTotalAmount(products);
+    final subtotal = calculateSubtotal(products);
+    final tax = calculateTax(subtotal);
+    final totalAmount = calculateTotalAmount(subtotal, tax);
 
     pdf.addPage(
       pw.Page(
-        margin: const pw.EdgeInsets.all(20),
-        build: (pw.Context context) => pw.Column(
-          crossAxisAlignment: pw.CrossAxisAlignment.start,
-          children: [
-            // Header
-            pw.Row(
-              mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-              children: [
-                pw.Text(
-                  'PT. Chemviro Buana Indonesia',
-                  style: pw.TextStyle(
-                    fontSize: 18,
-                    fontWeight: pw.FontWeight.bold,
-                    color: const PdfColor.fromInt(0xFF4CAF50),
+        pageFormat: PdfPageFormat.a4,
+        build: (pw.Context context) {
+          return pw.Column(
+            crossAxisAlignment: pw.CrossAxisAlignment.start,
+            children: [
+              pw.Text(
+                'Sales Order',
+                style: pw.TextStyle(
+                  fontSize: 24,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 16),
+              pw.Text('Order Number: ${order['order_number'] ?? '-'}'),
+              pw.Text(
+                  'Branch Company: ${order['branch_company']?['name'] ?? 'Unknown'}'),
+              pw.Text('Client: ${order['client']?['name'] ?? '-'}'),
+              pw.Text('Address: ${order['client']?['address'] ?? '-'}'),
+              pw.Text('Email: ${order['client']?['email'] ?? '-'}'),
+              pw.Text('Phone: ${order['client']?['phone'] ?? '-'}'),
+              pw.Text('Status: ${order['status'] ?? '-'}'),
+              pw.SizedBox(height: 16),
+              pw.Text(
+                'Items:',
+                style: pw.TextStyle(
+                  fontSize: 16,
+                  fontWeight: pw.FontWeight.bold,
+                ),
+              ),
+              pw.SizedBox(height: 8),
+              pw.Table(
+                border: pw.TableBorder.all(),
+                columnWidths: {
+                  0: pw.FlexColumnWidth(2),
+                  1: pw.FlexColumnWidth(1),
+                  2: pw.FlexColumnWidth(1),
+                },
+                children: [
+                  pw.TableRow(
+                    decoration: pw.BoxDecoration(color: PdfColors.grey300),
+                    children: [
+                      pw.Text('Name',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('Price',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                      pw.Text('Category',
+                          style: pw.TextStyle(fontWeight: pw.FontWeight.bold)),
+                    ],
                   ),
-                ),
-                pw.Text(
-                  'Head Office',
-                  style: pw.TextStyle(fontSize: 12, color: PdfColors.grey600),
-                ),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-            // Order details
-            pw.Text(
-              'Order Details',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-                decoration: pw.TextDecoration.underline,
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            pw.Table(
-              columnWidths: {
-                0: const pw.FlexColumnWidth(1),
-                1: const pw.FlexColumnWidth(2),
-              },
-              children: [
-                _buildRow('Order Number', order['order_number']),
-                _buildRow('Client', order['client']?['name']),
-                _buildRow('Address', order['client']?['address']),
-                _buildRow('Email', order['client']?['email']),
-                _buildRow('Phone', order['client']?['phone']),
-                _buildRow('Status', order['status']),
-              ],
-            ),
-            pw.SizedBox(height: 20),
-            // Product details
-            pw.Text(
-              'Products',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
-                decoration: pw.TextDecoration.underline,
-              ),
-            ),
-            pw.SizedBox(height: 10),
-            ...products.map((product) => pw.Row(
-                  mainAxisAlignment: pw.MainAxisAlignment.spaceBetween,
-                  children: [
-                    pw.Text(product['name'] ?? 'Unknown Product'),
-                    pw.Text(
-                      'Rp. ${product['price_product'] != null ? double.tryParse(product['price_product']['price'].toString())?.toStringAsFixed(2) ?? "0.00" : "0.00"}',
+                  ...products.map(
+                    (product) => pw.TableRow(
+                      children: [
+                        pw.Padding(
+                          padding: pw.EdgeInsets.all(4),
+                          child: pw.Text(product['name'] ?? 'Unknown'),
+                        ),
+                        pw.Padding(
+                          padding: pw.EdgeInsets.all(4),
+                          child: pw.Text(
+                            'Rp. ${double.tryParse(product['price_product']?['price']?.toString() ?? '0')?.toStringAsFixed(2)}',
+                          ),
+                        ),
+                        pw.Padding(
+                          padding: pw.EdgeInsets.all(4),
+                          child: pw.Text(product['category'] ?? 'Unknown'),
+                        ),
+                      ],
                     ),
-                  ],
-                )),
-            pw.SizedBox(height: 20),
-            // Total amount
-            pw.Text(
-              'Total Amount: Rp. ${totalAmount.toStringAsFixed(2)}',
-              style: pw.TextStyle(
-                fontSize: 16,
-                fontWeight: pw.FontWeight.bold,
+                  ),
+                ],
               ),
-            ),
-          ],
-        ),
+              pw.SizedBox(height: 16),
+              pw.Divider(),
+              pw.Text('Subtotal: Rp. ${subtotal.toStringAsFixed(2)}'),
+              pw.Text('Tax (11%): Rp. ${tax.toStringAsFixed(2)}'),
+              pw.Text('Total: Rp. ${totalAmount.toStringAsFixed(2)}'),
+            ],
+          );
+        },
       ),
     );
 
     try {
-      final outputDir = await getApplicationDocumentsDirectory();
+      final directory = await getApplicationDocumentsDirectory();
       final timestamp = DateTime.now().millisecondsSinceEpoch;
-      final file = File('${outputDir.path}/sales_order_$timestamp.pdf');
+      final file = File('${directory.path}/sales_order_$timestamp.pdf');
       await file.writeAsBytes(await pdf.save());
-
-      Get.snackbar(
-        'Success',
-        'PDF downloaded to ${file.path}',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.green,
-        colorText: Colors.white,
-      );
+      Get.snackbar('Success', 'PDF berhasil disimpan di ${file.path}',
+          snackPosition: SnackPosition.BOTTOM);
     } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to download PDF: $e',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
+      Get.snackbar('Error', 'Gagal menyimpan PDF: $e',
+          snackPosition: SnackPosition.BOTTOM);
     }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final products = List<dynamic>.from(order['products'] ?? []);
-    final totalAmount = calculateTotalAmount(products);
-
-    return Scaffold(
-      appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            Navigator.pop(context);
-          },
-        ),
-        title: Text(
-          'Sales Order Details',
-          style: TextStyle(
-            color: Colors.green,
-            fontSize: screenWidth * 0.045,
-          ),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          CircleAvatar(
-            backgroundColor: Colors.grey.shade300,
-            child: Icon(
-              Icons.person,
-              color: Colors.white,
-              size: screenWidth * 0.05,
-            ),
-          ),
-          SizedBox(width: screenWidth * 0.04),
-        ],
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(screenWidth * 0.04),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Container(
-              padding: EdgeInsets.all(screenWidth * 0.04),
-              decoration: BoxDecoration(
-                color: Colors.green.shade50,
-                borderRadius: BorderRadius.circular(screenWidth * 0.02),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildDetailRow(
-                      'Order Number', order['order_number'] ?? '', screenWidth),
-                  _buildDetailRow(
-                      'Client', order['client']?['name'] ?? '', screenWidth),
-                  _buildDetailRow('Address', order['client']?['address'] ?? '',
-                      screenWidth),
-                  _buildDetailRow(
-                      'Email', order['client']?['email'] ?? '', screenWidth),
-                  _buildDetailRow(
-                      'Phone', order['client']?['phone'] ?? '', screenWidth),
-                  _buildDetailRow('Status', order['status'] ?? '', screenWidth),
-                ],
-              ),
-            ),
-            SizedBox(height: screenWidth * 0.04),
-            Text(
-              'Products',
-              style: TextStyle(
-                fontSize: screenWidth * 0.045,
-                fontWeight: FontWeight.bold,
-                color: Colors.black87,
-              ),
-            ),
-            SizedBox(height: screenWidth * 0.02),
-            ...products.map((product) {
-              return _buildProductRow(
-                product['name'] ?? 'Unknown Product',
-                product['price_product'] != null
-                    ? 'Rp. ${double.tryParse(product['price_product']['price'].toString())?.toStringAsFixed(2) ?? "0.00"}'
-                    : 'Rp. 0.00',
-                screenWidth,
-              );
-            }).toList(),
-            Divider(),
-            _buildSummaryRow('Total Amount',
-                'Rp. ${totalAmount.toStringAsFixed(2)}', screenWidth),
-            SizedBox(height: screenWidth * 0.04),
-            ElevatedButton(
-              onPressed: () => generatePdf(context),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(screenWidth * 0.02),
-                ),
-                minimumSize: Size(double.infinity, screenWidth * 0.12),
-              ),
-              child: Text(
-                'Download PDF',
-                style: TextStyle(
-                  fontSize: screenWidth * 0.04,
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDetailRow(String label, String value, double screenWidth) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.01),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: screenWidth * 0.035,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: screenWidth * 0.035,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildProductRow(String name, String price, double screenWidth) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.01),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              name,
-              style: TextStyle(
-                fontSize: screenWidth * 0.035,
-                color: Colors.black87,
-              ),
-            ),
-          ),
-          Text(
-            price,
-            style: TextStyle(
-              fontSize: screenWidth * 0.035,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildSummaryRow(String label, String value, double screenWidth) {
-    return Padding(
-      padding: EdgeInsets.symmetric(vertical: screenWidth * 0.01),
-      child: Row(
-        children: [
-          Expanded(
-            child: Text(
-              label,
-              style: TextStyle(
-                fontSize: screenWidth * 0.035,
-                fontWeight: FontWeight.bold,
-                color: Colors.grey[700],
-              ),
-            ),
-          ),
-          Text(
-            value,
-            style: TextStyle(
-              fontSize: screenWidth * 0.035,
-              fontWeight: FontWeight.bold,
-              color: Colors.black87,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  pw.TableRow _buildRow(String label, String? value) {
-    return pw.TableRow(
-      children: [
-        pw.Text(
-          '$label:',
-          style: pw.TextStyle(
-            fontSize: 12,
-            fontWeight: pw.FontWeight.bold,
-          ),
-        ),
-        pw.Text(
-          value ?? '',
-          style: pw.TextStyle(fontSize: 12),
-        ),
-      ],
-    );
   }
 }

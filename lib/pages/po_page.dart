@@ -15,6 +15,7 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
   final ApiService _apiService = Get.find<ApiService>();
   List<Map<String, dynamic>> purchaseOrders = [];
   bool isLoading = true;
+  double totalSalesIncome = 0.0;
 
   @override
   void initState() {
@@ -26,10 +27,10 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
     try {
       final response = await _apiService.fetchOrdersByStatus('Purchase Order');
       setState(() {
-        // Filter hanya order dengan status 'Purchase Order'
         purchaseOrders = response
             .where((order) => order['status'] == 'Purchase Order')
             .toList();
+        totalSalesIncome = calculateTotalSalesIncome(purchaseOrders);
         isLoading = false;
       });
     } catch (e) {
@@ -49,7 +50,6 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
   double calculateTotalAmount(List<dynamic> products) {
     double total = 0;
 
-    // Kalkulasi total harga produk
     for (var product in products) {
       final priceProduct = product['price_product'];
       final price = priceProduct != null
@@ -58,10 +58,21 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
       total += price;
     }
 
-    // Tambahkan pajak 11%
     total += (total * 11 / 100);
 
     return total;
+  }
+
+  double calculateTotalSalesIncome(List<Map<String, dynamic>> orders) {
+    double salesIncome = 0.0;
+
+    for (var order in orders) {
+      final products = List<dynamic>.from(order['products']);
+      final totalAmount = calculateTotalAmount(products);
+      salesIncome += (totalAmount * 5 / 100);
+    }
+
+    return salesIncome;
   }
 
   @override
@@ -91,29 +102,49 @@ class _PurchaseOrderPageState extends State<PurchaseOrderPage> {
           ? const Center(child: CircularProgressIndicator())
           : purchaseOrders.isEmpty
               ? const Center(child: Text('No Purchase Orders Available'))
-              : ListView.builder(
-                  padding: const EdgeInsets.all(16.0),
-                  itemCount: purchaseOrders.length,
-                  itemBuilder: (context, index) {
-                    final order = purchaseOrders[index];
-                    final products = List<dynamic>.from(order['products']);
-                    final totalAmount = calculateTotalAmount(products);
+              : Column(
+                  children: [
+                    Expanded(
+                      child: ListView.builder(
+                        padding: const EdgeInsets.all(16.0),
+                        itemCount: purchaseOrders.length,
+                        itemBuilder: (context, index) {
+                          final order = purchaseOrders[index];
+                          final products =
+                              List<dynamic>.from(order['products']);
+                          final totalAmount = calculateTotalAmount(products);
 
-                    return _buildOrderCard(
-                      icon: Icons.water_drop,
-                      title: order['status'],
-                      orderNumber: order['order_number'],
-                      client: order['client']?['name'] ?? 'Unknown Client',
-                      product: products.isNotEmpty
-                          ? products.map((p) => p['name']).join(', ')
-                          : 'No Products',
-                      totalAmount: 'Rp. ${totalAmount.toStringAsFixed(2)}',
-                      onPressed: () {
-                        // Navigasi ke halaman detail dengan data order
-                        Get.to(() => PurchaseOrderDetailPage(order: order));
-                      },
-                    );
-                  },
+                          return _buildOrderCard(
+                            icon: Icons.water_drop,
+                            title: order['status'],
+                            orderNumber: order['order_number'],
+                            client:
+                                order['client']?['name'] ?? 'Unknown Client',
+                            product: products.isNotEmpty
+                                ? products.map((p) => p['name']).join(', ')
+                                : 'No Products',
+                            totalAmount:
+                                'Rp. ${totalAmount.toStringAsFixed(2)}',
+                            onPressed: () {
+                              Get.to(
+                                  () => PurchaseOrderDetailPage(order: order));
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                    Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Text(
+                        'Total Sales Income: Rp. ${totalSalesIncome.toStringAsFixed(2)}',
+                        style: const TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
     );
   }

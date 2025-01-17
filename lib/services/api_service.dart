@@ -254,7 +254,12 @@ class ApiService {
     final response = await http.get(url, headers: _getHeaders());
 
     if (response.statusCode == 200) {
-      return json.decode(response.body)['data'];
+      final data = json.decode(response.body)['data'];
+      print("Branch Company Data: ${data['branch_company']}"); // Debugging
+      if (data['branch_company'] == null) {
+        throw Exception("Branch Company data is missing from API response.");
+      }
+      return data;
     } else {
       throw Exception("Failed to fetch order details: ${response.body}");
     }
